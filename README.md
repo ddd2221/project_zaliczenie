@@ -15,7 +15,8 @@ Pozwala na dodawanie, edytowanie oraz przeglądanie wydarzeń.
 
 ## Technologie
 
-- HTML  
+- HTML
+- PHP
 - CSS  
 - JavaScript  
 
