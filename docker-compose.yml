@@ -1,0 +1,70 @@
+services:
+  localpulse_db:
+    image: postgres:16-alpine
+    container_name: localpulse_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-localpulse}
+      POSTGRES_USER: ${POSTGRES_USER:-localpulse_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localpulse_secret_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-localpulse_user} -d ${POSTGRES_DB:-localpulse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - localpulse_network
+
+  localpulse_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: localpulse_backend
+    restart: unless-stopped
+    command: /app/entrypoint.sh
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=localpulse-super-secret-dev-key-change-in-production-2026
+      - DATABASE_URL=postgres://${POSTGRES_USER:-localpulse_user}:${POSTGRES_PASSWORD:-localpulse_secret_2026}@localpulse_db:5432/${POSTGRES_DB:-localpulse}
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      localpulse_db:
+        condition: service_healthy
+    networks:
+      - localpulse_network
+
+  localpulse_frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: localpulse_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - localpulse_backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - localpulse_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  localpulse_network:
+    driver: bridge
