@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
@@ -8,7 +9,7 @@ User = get_user_model()
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
-    icon_name = models.CharField(max_length=50, default='calendar', help_prefix='Lucide icon name')
+    icon_name = models.CharField(max_length=50, default='calendar', help_text='Lucide icon name')
 
     class Meta:
         verbose_name_plural = 'Categories'
@@ -108,3 +109,48 @@ class Event(models.Model):
 
     def __str__(self):
         return f"{self.title} @ {self.venue.name} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"
+
+
+class Registration(models.Model):
+    class Status(models.TextChoices):
+        CONFIRMED = 'CONFIRMED', 'Confirmed'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='registrations'
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='registrations'
+    )
+    ticket_code = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        db_index=True,
+        help_text='Cryptographically unique UUID4 pass for entry verification'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.CONFIRMED,
+        db_index=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'event'],
+                name='unique_user_event_registration',
+                violation_error_message='You already have an active registration for this event.'
+            )
+        ]
+
+    def __str__(self):
+        return f"Pass {self.ticket_code} - {self.user.username} for {self.event.title} [{self.status}]"

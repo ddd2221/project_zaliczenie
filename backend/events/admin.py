@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Venue, Event
+from .models import Category, Venue, Event, Registration
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -29,3 +29,10 @@ class EventAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description', 'venue__name', 'venue__city')
     prepopulated_fields = {'slug': ('title',)}
     date_hierarchy = 'start_time'
+
+@admin.register(Registration)
+class RegistrationAdmin(admin.ModelAdmin):
+    list_display = ('ticket_code', 'user', 'event', 'status', 'created_at')
+    list_filter = ('status', 'created_at', 'event__category')
+    search_fields = ('ticket_code', 'user__username', 'event__title')
+    readonly_fields = ('ticket_code', 'created_at')
