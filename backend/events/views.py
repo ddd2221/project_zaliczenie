@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
@@ -16,22 +16,43 @@ from .serializers import (
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
+    """
+    Returns categories with annotated active events count, avoiding N+1 query overhead.
+    """
     serializer_class = CategorySerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
 
+    def get_queryset(self):
+        return Category.objects.annotate(
+            events_count=models.Count(
+                'events',
+                filter=models.Q(events__is_published=True)
+            )
+        ).order_by('name')
+
 
 class VenueViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Venue.objects.all()
+    queryset = Venue.objects.all().order_by('city', 'name')
     serializer_class = VenueSerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
 
 
 class EventViewSet(viewsets.ModelViewSet):
-    queryset = Event.objects.filter(is_published=True)
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+    def get_queryset(self):
+        """
+        Eliminates N+1 query problem by eagerly joining foreign relations in a single SQL query:
+        select_related('venue', 'category', 'organizer')
+        """
+        queryset = Event.objects.filter(is_published=True).select_related(
+            'venue',
+            'category',
+            'organizer'
+        )
+        return queryset
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -124,7 +145,17 @@ class RegistrationViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        return Registration.objects.filter(user=self.request.user)
+        """
+        Prefetches nested event, venue, and category to prevent query storms on /my-events.
+        """
+        return Registration.objects.filter(
+            user=self.request.user
+        ).select_related(
+            'event',
+            'event__venue',
+            'event__category',
+            'user'
+        ).order_by('-created_at')
 
     @extend_schema(
         summary="Cancel a Reservation",
