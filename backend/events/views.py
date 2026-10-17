@@ -1,10 +1,12 @@
 from django.db import transaction, models
 from django.utils import timezone
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import Category, Venue, Event, Registration
+from .filters import EventFilter
 from .serializers import (
     CategorySerializer,
     VenueSerializer,
@@ -41,6 +43,11 @@ class VenueViewSet(viewsets.ReadOnlyModelViewSet):
 
 class EventViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
+    filterset_class = EventFilter
+    search_fields = ('title', 'description', 'venue__name', 'venue__city')
+    ordering_fields = ('start_time', 'remaining_spots', 'price', 'created_at')
+    ordering = ('start_time',)
 
     def get_queryset(self):
         """
