@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import Category, Venue, Event, Registration
 from .filters import EventFilter
+from .permissions import IsOrganizerOrReadOnly
 from .serializers import (
     CategorySerializer,
     VenueSerializer,
@@ -42,7 +43,7 @@ class VenueViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class EventViewSet(viewsets.ModelViewSet):
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOrganizerOrReadOnly)
     filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
     filterset_class = EventFilter
     search_fields = ('title', 'description', 'venue__name', 'venue__city')

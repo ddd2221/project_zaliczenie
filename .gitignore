@@ -52,3 +52,7 @@ Thumbs.db
 
 # Documentation excluded per software house specs
 LEARNING_GUIDE.md
+
+# TypeScript build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
