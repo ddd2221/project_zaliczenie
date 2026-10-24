@@ -11,7 +11,7 @@ $login = htmlspecialchars($_SESSION['login']);
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Local Events Manager</title>
+    <title>Kontakty</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -112,7 +112,6 @@ function closeModalSearch() {
                 <option value="Bielsko-Biała">
                 <option value="Tychy">
                 <option value="Koszalin">
-                <option value="Rivne">
                 <option value="Domanivka"> 
             </datalist></br> 
 
